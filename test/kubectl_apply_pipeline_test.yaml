@@ -16,8 +16,8 @@ components:
           artifactType:
             schemaTitle: system.Artifact
             schemaVersion: 0.0.1
-  comp-test-kubectl-apply-local:
-    executorLabel: exec-test-kubectl-apply-local
+  comp-kubectl-apply-local:
+    executorLabel: exec-kubectl-apply-local
     inputDefinitions:
       parameters:
         file_path:
@@ -50,17 +50,17 @@ deploymentSpec:
 
           '
         - "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import\
-          \ *\n\ndef create_artifact(\n    data: str,\n    output_artifact: Output[Artifact],\n\
-          ):\n    with open(output_artifact.path, 'w') as f:\n        f.write(data)\n\
+          \ *\n\ndef create_artifact(\n\n    data: str,\n\n    output_artifact: Output[Artifact],\n\
+          \n):\n\n    with open(output_artifact.path, 'w') as f:\n\n        f.write(data)\n\
           \n"
         image: python:3.9
-    exec-test-kubectl-apply-local:
+    exec-kubectl-apply-local:
       container:
         args:
         - --executor_input
         - '{{$}}'
         - --function_to_execute
-        - test_kubectl_apply_local
+        - kubectl_apply_local
         command:
         - sh
         - -c
@@ -80,11 +80,11 @@ deploymentSpec:
 
           '
         - "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import\
-          \ *\n\ndef test_kubectl_apply_local(file_path: str):\n  import subprocess\n\
-          \  import json\n  import time\n  result = subprocess.run(['kubectl', 'apply',\
-          \ '-f', file_path], capture_output=True, )\n  if result.returncode != 0:\n\
-          \    raise Exception(f\"Error applying kubectl: {result.stderr}\")\n  print(result.stdout)\n\
-          \n"
+          \ *\n\ndef kubectl_apply_local(file_path: str):\n\n  import subprocess\n\
+          \n  import json\n\n  import time\n\n  result = subprocess.run(['kubectl',\
+          \ 'apply', '-f', file_path], capture_output=True, text=True)\n\n  if result.returncode\
+          \ != 0:\n\n    raise Exception(f\"Error applying kubectl: {result.stderr}\"\
+          )\n\n  print(result.stdout)\n\n"
         image: python:3.9
 pipelineInfo:
   description: rt
@@ -104,17 +104,17 @@ root:
                 constant: Goodbye, World!
         taskInfo:
           name: create-artifact
-      test-kubectl-apply-local:
+      kubectl-apply-local:
         cachingOptions:
           enableCache: true
         componentRef:
-          name: comp-test-kubectl-apply-local
+          name: comp-kubectl-apply-local
         inputs:
           parameters:
             file_path:
               componentInputParameter: file_path
         taskInfo:
-          name: test-kubectl-apply-local
+          name: kubectl-apply-local
   inputDefinitions:
     parameters:
       file_path:

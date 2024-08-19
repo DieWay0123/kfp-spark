@@ -18,7 +18,7 @@
 apiVersion: sparkoperator.k8s.io/v1beta2
 kind: SparkApplication
 metadata:
-  name: spark-pi-python
+  name: pyspark-process-10kdataset
   namespace: default
 spec:
   type: Python
@@ -26,7 +26,7 @@ spec:
   mode: cluster
   image: spark:3.5.0
   imagePullPolicy: IfNotPresent
-  mainApplicationFile: local:///opt/spark/examples/src/main/python/pi.py
+  mainApplicationFile: local:///opt/spark/examples/src/main/python/pyspark_process_10kdataset.py
   sparkVersion: 3.5.0
   driver:
     labels:
