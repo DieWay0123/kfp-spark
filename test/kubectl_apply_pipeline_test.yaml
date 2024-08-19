@@ -1,0 +1,123 @@
+# PIPELINE DEFINITION
+# Name: test-kubectl-apply-local
+# Description: rt
+# Inputs:
+#    file_path: str
+components:
+  comp-create-artifact:
+    executorLabel: exec-create-artifact
+    inputDefinitions:
+      parameters:
+        data:
+          parameterType: STRING
+    outputDefinitions:
+      artifacts:
+        output_artifact:
+          artifactType:
+            schemaTitle: system.Artifact
+            schemaVersion: 0.0.1
+  comp-test-kubectl-apply-local:
+    executorLabel: exec-test-kubectl-apply-local
+    inputDefinitions:
+      parameters:
+        file_path:
+          parameterType: STRING
+deploymentSpec:
+  executors:
+    exec-create-artifact:
+      container:
+        args:
+        - --executor_input
+        - '{{$}}'
+        - --function_to_execute
+        - create_artifact
+        command:
+        - sh
+        - -c
+        - "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip ||\
+          \ python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1\
+          \ python3 -m pip install --quiet --no-warn-script-location 'kfp==2.8.0'\
+          \ '--no-deps' 'typing-extensions>=3.7.4,<5; python_version<\"3.9\"' && \"\
+          $0\" \"$@\"\n"
+        - sh
+        - -ec
+        - 'program_path=$(mktemp -d)
+
+
+          printf "%s" "$0" > "$program_path/ephemeral_component.py"
+
+          _KFP_RUNTIME=true python3 -m kfp.dsl.executor_main                         --component_module_path                         "$program_path/ephemeral_component.py"                         "$@"
+
+          '
+        - "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import\
+          \ *\n\ndef create_artifact(\n    data: str,\n    output_artifact: Output[Artifact],\n\
+          ):\n    with open(output_artifact.path, 'w') as f:\n        f.write(data)\n\
+          \n"
+        image: python:3.9
+    exec-test-kubectl-apply-local:
+      container:
+        args:
+        - --executor_input
+        - '{{$}}'
+        - --function_to_execute
+        - test_kubectl_apply_local
+        command:
+        - sh
+        - -c
+        - "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip ||\
+          \ python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1\
+          \ python3 -m pip install --quiet --no-warn-script-location 'kfp==2.8.0'\
+          \ '--no-deps' 'typing-extensions>=3.7.4,<5; python_version<\"3.9\"' && \"\
+          $0\" \"$@\"\n"
+        - sh
+        - -ec
+        - 'program_path=$(mktemp -d)
+
+
+          printf "%s" "$0" > "$program_path/ephemeral_component.py"
+
+          _KFP_RUNTIME=true python3 -m kfp.dsl.executor_main                         --component_module_path                         "$program_path/ephemeral_component.py"                         "$@"
+
+          '
+        - "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import\
+          \ *\n\ndef test_kubectl_apply_local(file_path: str):\n  import subprocess\n\
+          \  import json\n  import time\n  result = subprocess.run(['kubectl', 'apply',\
+          \ '-f', file_path], capture_output=True, )\n  if result.returncode != 0:\n\
+          \    raise Exception(f\"Error applying kubectl: {result.stderr}\")\n  print(result.stdout)\n\
+          \n"
+        image: python:3.9
+pipelineInfo:
+  description: rt
+  name: test-kubectl-apply-local
+root:
+  dag:
+    tasks:
+      create-artifact:
+        cachingOptions:
+          enableCache: true
+        componentRef:
+          name: comp-create-artifact
+        inputs:
+          parameters:
+            data:
+              runtimeValue:
+                constant: Goodbye, World!
+        taskInfo:
+          name: create-artifact
+      test-kubectl-apply-local:
+        cachingOptions:
+          enableCache: true
+        componentRef:
+          name: comp-test-kubectl-apply-local
+        inputs:
+          parameters:
+            file_path:
+              componentInputParameter: file_path
+        taskInfo:
+          name: test-kubectl-apply-local
+  inputDefinitions:
+    parameters:
+      file_path:
+        parameterType: STRING
+schemaVersion: 2.1.0
+sdkVersion: kfp-2.8.0
