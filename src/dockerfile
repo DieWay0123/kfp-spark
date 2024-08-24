@@ -10,5 +10,5 @@ USER root
 RUN pip install --no-cache-dir -r requirements.txt
 
 
-CMD ["python", "pyspark_process_10kdataset.py"]
+CMD ["sleep", "infinity"]
 

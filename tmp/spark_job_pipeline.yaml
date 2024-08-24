@@ -1,0 +1,142 @@
+# PIPELINE DEFINITION
+# Name: spark-operator-job-pipeline
+# Description: Spark Operator job pipeline
+components:
+  comp-apply-kubernetes-object:
+    executorLabel: exec-apply-kubernetes-object
+    inputDefinitions:
+      artifacts:
+        object:
+          artifactType:
+            schemaTitle: system.Artifact
+            schemaVersion: 0.0.1
+    outputDefinitions:
+      parameters:
+        kind:
+          parameterType: STRING
+        name:
+          parameterType: STRING
+        object:
+          parameterType: STRUCT
+  comp-create-artifact:
+    executorLabel: exec-create-artifact
+    inputDefinitions:
+      parameters:
+        data:
+          parameterType: STRING
+    outputDefinitions:
+      artifacts:
+        output_artifact:
+          artifactType:
+            schemaTitle: system.Artifact
+            schemaVersion: 0.0.1
+deploymentSpec:
+  executors:
+    exec-apply-kubernetes-object:
+      container:
+        command:
+        - bash
+        - -exc
+        - 'object_path=$0
+
+          output_name_path=$1
+
+          output_kind_path=$2
+
+          output_object_path=$3
+
+          mkdir -p "$(dirname "$output_name_path")"
+
+          mkdir -p "$(dirname "$output_kind_path")"
+
+          mkdir -p "$(dirname "$output_object_path")"
+
+          kubectl apply -f "$object_path" --output=json > "$output_object_path"
+
+
+          < "$output_object_path" jq ''.metadata.name'' --raw-output > "$output_name_path"
+
+          < "$output_object_path" jq ''.kind'' --raw-output > "$output_kind_path"
+
+          '
+        - '{{$.inputs.artifacts[''object''].path}}'
+        - '{{$.outputs.parameters[''name''].output_file}}'
+        - '{{$.outputs.parameters[''kind''].output_file}}'
+        - '{{$.outputs.parameters[''object''].output_file}}'
+        image: bitnami/kubectl:1.29.8
+    exec-create-artifact:
+      container:
+        args:
+        - --executor_input
+        - '{{$}}'
+        - --function_to_execute
+        - create_artifact
+        command:
+        - sh
+        - -c
+        - "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip ||\
+          \ python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1\
+          \ python3 -m pip install --quiet --no-warn-script-location 'kfp==2.8.0'\
+          \ '--no-deps' 'typing-extensions>=3.7.4,<5; python_version<\"3.9\"' && \"\
+          $0\" \"$@\"\n"
+        - sh
+        - -ec
+        - 'program_path=$(mktemp -d)
+
+
+          printf "%s" "$0" > "$program_path/ephemeral_component.py"
+
+          _KFP_RUNTIME=true python3 -m kfp.dsl.executor_main                         --component_module_path                         "$program_path/ephemeral_component.py"                         "$@"
+
+          '
+        - "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import\
+          \ *\n\ndef create_artifact(\n    data: str,\n    output_artifact: Output[Artifact],\n\
+          ):\n    with open(output_artifact.path, 'w') as f:\n        f.write(data)\n\
+          \n"
+        image: python:3.9
+pipelineInfo:
+  description: Spark Operator job pipeline
+  name: spark-operator-job-pipeline
+root:
+  dag:
+    tasks:
+      apply-kubernetes-object:
+        cachingOptions:
+          enableCache: true
+        componentRef:
+          name: comp-apply-kubernetes-object
+        dependentTasks:
+        - create-artifact
+        inputs:
+          artifacts:
+            object:
+              taskOutputArtifact:
+                outputArtifactKey: output_artifact
+                producerTask: create-artifact
+        taskInfo:
+          name: apply-kubernetes-object
+      create-artifact:
+        cachingOptions:
+          enableCache: true
+        componentRef:
+          name: comp-create-artifact
+        inputs:
+          parameters:
+            data:
+              runtimeValue:
+                constant: '{"apiVersion": "sparkoperator.k8s.io/v1beta2", "kind":
+                  "SparkApplication", "metadata": {"name": "pyspark-pi-1724050519",
+                  "namespace": "default"}, "spec": {"type": "Python", "pythonVersion":
+                  "3", "mode": "cluster", "image": "gcr.io/spark-operator/spark-py:v3.5.0",
+                  "imagePullPolicy": "Always", "mainApplicationFile": "local:///opt/spark/examples/src/main/python/pi.py",
+                  "sparkVersion": "3.5.0", "restartPolicy": {"type": "OnFailure",
+                  "onFailureRetries": 3, "onFailureRetryInterval": 10, "onSubmissionFailureRetries":
+                  5, "onSubmissionFailureRetryInterval": 20}, "driver": {"cores":
+                  1, "coreLimit": "1200m", "memory": "512m", "labels": {"version":
+                  "3.5.0"}, "serviceAccount": "spark-operator-spark"}, "executor":
+                  {"cores": 1, "instances": 1, "memory": "512m", "labels": {"version":
+                  "3.5.0"}}}}'
+        taskInfo:
+          name: create-artifact
+schemaVersion: 2.1.0
+sdkVersion: kfp-2.8.0
