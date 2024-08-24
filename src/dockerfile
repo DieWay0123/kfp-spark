@@ -1,14 +1,11 @@
 FROM spark:3.5.0
 
-WORKDIR /opt/spark/examples/src/main/python
+WORKDIR /home/src
 
-COPY pyspark_process_10kdataset.py /opt/spark/examples/src/main/python
-COPY dataset.csv /opt/spark/examples/src/main/python
-COPY requirements.txt /opt/spark/examples/src/main/python
+COPY . .
 
 USER root
 RUN pip install --no-cache-dir -r requirements.txt
 
-
-CMD ["sleep", "infinity"]
+CMD ["ls", "-la"]
 

@@ -1,5 +1,5 @@
 #
-# Copyright 2018 Google LLC
+# Copyright 2017 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,52 +13,52 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-#TODO: Volume
-
-apiVersion: sparkoperator.k8s.io/v1beta2
+apiVersion: "sparkoperator.k8s.io/v1beta2"
 kind: SparkApplication
 metadata:
-  name: pyspark-process-10kdataset-2
+  name: spark-pi
   namespace: spark-operator
 spec:
-  type: Python
-  pythonVersion: "3"
+  type: Scala
   mode: cluster
-  image: "dieway/spark-process-dataset:latest"
+  image: "spark:3.5.0"
   imagePullPolicy: Always
-  mainApplicationFile: "local:///home/src/pyspark_process_10kdataset.py"
-  sparkVersion: 3.5.0
-  volumes:
-    - name: my-pvc
-      persistentVolumeClaim:
-        claimName: my-pvc
+  mainClass: org.apache.spark.examples.SparkPi
+  mainApplicationFile: "local:///opt/spark/examples/jars/spark-examples_2.12-3.5.0.jar"
+  sparkVersion: "3.5.0"
+  sparkUIOptions:
+    serviceLabels:
+      test-label/v1: 'true'
   restartPolicy:
-    type: Never       
+    type: Never
+  volumes:
+    - name: "test-pvc"
+      persistentVolumeClaim:
+        claimName: "test-pvc"
   driver:
+    cores: 1
+    coreLimit: "1200m"
+    memory: "512m"
     labels:
       version: 3.5.0
-    cores: 1
-    coreLimit: 1200m
-    memory: 512m
     serviceAccount: spark-operator-spark
     volumeMounts:
-      - name: my-pvc
-        mountPath: /mnt
+      - name: "test-pvc"
+        mountPath: "/tmp"
   executor:
+    cores: 1
+    instances: 1
+    memory: "512m"
     labels:
       version: 3.5.0
-    instances: 1
-    cores: 1
-    coreLimit: 1200m
-    memory: 512m
     volumeMounts:
-      - name: my-pvc
-        mountPath: /mnt
+      - name: "test-pvc"
+        mountPath: "/tmp"
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata: 
-  name: my-pvc
+  name: test-pvc
   namespace: spark-operator
 spec:
   accessModes:

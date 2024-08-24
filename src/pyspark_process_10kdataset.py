@@ -36,7 +36,7 @@ if __name__ == "__main__":
   df_data.printSchema()
 
   #df_data.coalesce(1).write.csv('mycsv2.csv')
-  df_data.toPandas().to_csv('mycsv.csv', header=False, index=False)
+  df_data.toPandas().to_csv('/mnt/mycsv.csv', header=False, index=False)
   #df_data.write.csv('./processed_dataset.csv', header=False, mode='overwrite')
   spark.stop()
 
