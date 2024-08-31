@@ -1,0 +1,184 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  generateName: spark-operator-job-pipeline-
+  annotations: {pipelines.kubeflow.org/kfp_sdk_version: 1.8.1, pipelines.kubeflow.org/pipeline_compilation_time: '2024-08-31T20:54:59.562327',
+    pipelines.kubeflow.org/pipeline_spec: '{"description": "Spark Operator job pipeline",
+      "inputs": [{"name": "sparkApplication_NS", "type": "String"}, {"name": "sparkApplication_SA",
+      "type": "String"}], "name": "Spark Operator job pipeline"}'}
+  labels: {pipelines.kubeflow.org/kfp_sdk_version: 1.8.1}
+spec:
+  entrypoint: spark-operator-job-pipeline
+  templates:
+  - name: apply-kubernetes-object
+    container:
+      args: []
+      command:
+      - bash
+      - -exc
+      - |
+        object_path=$0
+        output_name_path=$1
+        output_kind_path=$2
+        output_object_path=$3
+        mkdir -p "$(dirname "$output_name_path")"
+        mkdir -p "$(dirname "$output_kind_path")"
+        mkdir -p "$(dirname "$output_object_path")"
+        kubectl apply -f "$object_path" --output=json > "$output_object_path"
+
+        < "$output_object_path" jq '.metadata.name' --raw-output > "$output_name_path"
+        < "$output_object_path" jq '.kind' --raw-output > "$output_kind_path"
+      - /tmp/inputs/Object/data
+      - /tmp/outputs/Name/data
+      - /tmp/outputs/Kind/data
+      - /tmp/outputs/Object/data
+      image: bitnami/kubectl:1.17.17
+    inputs:
+      parameters:
+      - {name: sparkApplication_NS}
+      - {name: sparkApplication_SA}
+      artifacts:
+      - name: Object
+        path: /tmp/inputs/Object/data
+        raw: {data: '{"apiVersion": "sparkoperator.k8s.io/v1beta2", "kind": "SparkApplication",
+            "metadata": {"name": "pyspark-process-10kdataset-1725108899", "namespace":
+            "{{inputs.parameters.sparkApplication_NS}}"}, "spec": {"type": "Python",
+            "pythonVersion": "3", "mode": "cluster", "image": "dieway/spark-process-dataset:latest",
+            "imagePullPolicy": "Always", "mainApplicationFile": "local:///home/src/pyspark_process_10kdataset.py",
+            "sparkVersion": "3.5.0", "volumes": [{"name": "my-pvc", "persistentVolumeClaim":
+            {"claimName": "my-pvc"}}], "restartPolicy": {"type": "Never"}, "driver":
+            {"labels": {"version": "3.5.0"}, "cores": 1, "coreLimit": "1200m", "memory":
+            "512m", "serviceAccount": "{{inputs.parameters.sparkApplication_SA}}",
+            "volumeMounts": [{"name": "my-pvc", "mountPath": "/mnt"}]}, "executor":
+            {"labels": {"version": "3.5.0"}, "instances": 1, "cores": 1, "coreLimit":
+            "1200m", "memory": "512m", "volumeMounts": [{"name": "my-pvc", "mountPath":
+            "/mnt"}]}}}'}
+    outputs:
+      parameters:
+      - name: apply-kubernetes-object-Name
+        valueFrom: {path: /tmp/outputs/Name/data}
+      artifacts:
+      - {name: apply-kubernetes-object-Kind, path: /tmp/outputs/Kind/data}
+      - {name: apply-kubernetes-object-Name, path: /tmp/outputs/Name/data}
+      - {name: apply-kubernetes-object-Object, path: /tmp/outputs/Object/data}
+    metadata:
+      annotations: {author: Alexey Volkov <alexey.volkov@ark-kun.com>, pipelines.kubeflow.org/component_spec: '{"implementation":
+          {"container": {"command": ["bash", "-exc", "object_path=$0\noutput_name_path=$1\noutput_kind_path=$2\noutput_object_path=$3\nmkdir
+          -p \"$(dirname \"$output_name_path\")\"\nmkdir -p \"$(dirname \"$output_kind_path\")\"\nmkdir
+          -p \"$(dirname \"$output_object_path\")\"\nkubectl apply -f \"$object_path\"
+          --output=json > \"$output_object_path\"\n\n< \"$output_object_path\" jq
+          ''.metadata.name'' --raw-output > \"$output_name_path\"\n< \"$output_object_path\"
+          jq ''.kind'' --raw-output > \"$output_kind_path\"\n", {"inputPath": "Object"},
+          {"outputPath": "Name"}, {"outputPath": "Kind"}, {"outputPath": "Object"}],
+          "image": "bitnami/kubectl:1.17.17"}}, "inputs": [{"name": "Object", "type":
+          "JsonObject"}], "metadata": {"annotations": {"author": "Alexey Volkov <alexey.volkov@ark-kun.com>"}},
+          "name": "Apply Kubernetes object", "outputs": [{"name": "Name", "type":
+          "String"}, {"name": "Kind", "type": "String"}, {"name": "Object", "type":
+          "JsonObject"}]}', pipelines.kubeflow.org/component_ref: '{"digest": "31e4123b45bebd4323a4ffd51fea3744046f9be8e77a2ccf06ba09f80359fcf5",
+          "url": "k8s-apply-component.yaml"}', pipelines.kubeflow.org/max_cache_staleness: P0D}
+      labels:
+        pipelines.kubeflow.org/kfp_sdk_version: 1.8.1
+        pipelines.kubeflow.org/pipeline-sdk-type: kfp
+        pipelines.kubeflow.org/enable_caching: "true"
+  - name: print-msg
+    container:
+      args: [--msg, 'Job {{inputs.parameters.apply-kubernetes-object-Name}} is completed.',
+        '----output-paths', /tmp/outputs/Output/data]
+      command:
+      - sh
+      - -ec
+      - |
+        program_path=$(mktemp)
+        printf "%s" "$0" > "$program_path"
+        python3 -u "$program_path" "$@"
+      - |
+        def print_msg(msg):
+            print(msg)
+            return msg
+
+        def _serialize_str(str_value: str) -> str:
+            if not isinstance(str_value, str):
+                raise TypeError('Value "{}" has type "{}" instead of str.'.format(
+                    str(str_value), str(type(str_value))))
+            return str_value
+
+        import argparse
+        _parser = argparse.ArgumentParser(prog='Print msg', description='')
+        _parser.add_argument("--msg", dest="msg", type=str, required=True, default=argparse.SUPPRESS)
+        _parser.add_argument("----output-paths", dest="_output_paths", type=str, nargs=1)
+        _parsed_args = vars(_parser.parse_args())
+        _output_files = _parsed_args.pop("_output_paths", [])
+
+        _outputs = print_msg(**_parsed_args)
+
+        _outputs = [_outputs]
+
+        _output_serializers = [
+            _serialize_str,
+
+        ]
+
+        import os
+        for idx, output_file in enumerate(_output_files):
+            try:
+                os.makedirs(os.path.dirname(output_file))
+            except OSError:
+                pass
+            with open(output_file, 'w') as f:
+                f.write(_output_serializers[idx](_outputs[idx]))
+      image: python:3.9
+    inputs:
+      parameters:
+      - {name: apply-kubernetes-object-Name}
+    outputs:
+      artifacts:
+      - {name: print-msg-Output, path: /tmp/outputs/Output/data}
+    metadata:
+      labels:
+        pipelines.kubeflow.org/kfp_sdk_version: 1.8.1
+        pipelines.kubeflow.org/pipeline-sdk-type: kfp
+        pipelines.kubeflow.org/enable_caching: "true"
+      annotations: {pipelines.kubeflow.org/component_spec: '{"implementation": {"container":
+          {"args": ["--msg", {"inputValue": "msg"}, "----output-paths", {"outputPath":
+          "Output"}], "command": ["sh", "-ec", "program_path=$(mktemp)\nprintf \"%s\"
+          \"$0\" > \"$program_path\"\npython3 -u \"$program_path\" \"$@\"\n", "def
+          print_msg(msg):\n    print(msg)\n    return msg\n\ndef _serialize_str(str_value:
+          str) -> str:\n    if not isinstance(str_value, str):\n        raise TypeError(''Value
+          \"{}\" has type \"{}\" instead of str.''.format(\n            str(str_value),
+          str(type(str_value))))\n    return str_value\n\nimport argparse\n_parser
+          = argparse.ArgumentParser(prog=''Print msg'', description='''')\n_parser.add_argument(\"--msg\",
+          dest=\"msg\", type=str, required=True, default=argparse.SUPPRESS)\n_parser.add_argument(\"----output-paths\",
+          dest=\"_output_paths\", type=str, nargs=1)\n_parsed_args = vars(_parser.parse_args())\n_output_files
+          = _parsed_args.pop(\"_output_paths\", [])\n\n_outputs = print_msg(**_parsed_args)\n\n_outputs
+          = [_outputs]\n\n_output_serializers = [\n    _serialize_str,\n\n]\n\nimport
+          os\nfor idx, output_file in enumerate(_output_files):\n    try:\n        os.makedirs(os.path.dirname(output_file))\n    except
+          OSError:\n        pass\n    with open(output_file, ''w'') as f:\n        f.write(_output_serializers[idx](_outputs[idx]))\n"],
+          "image": "python:3.9"}}, "inputs": [{"name": "msg", "type": "String"}],
+          "name": "Print msg", "outputs": [{"name": "Output", "type": "String"}]}',
+        pipelines.kubeflow.org/component_ref: '{}', pipelines.kubeflow.org/arguments.parameters: '{"msg":
+          "Job {{inputs.parameters.apply-kubernetes-object-Name}} is completed."}',
+        pipelines.kubeflow.org/max_cache_staleness: P0D}
+  - name: spark-operator-job-pipeline
+    inputs:
+      parameters:
+      - {name: sparkApplication_NS}
+      - {name: sparkApplication_SA}
+    dag:
+      tasks:
+      - name: apply-kubernetes-object
+        template: apply-kubernetes-object
+        arguments:
+          parameters:
+          - {name: sparkApplication_NS, value: '{{inputs.parameters.sparkApplication_NS}}'}
+          - {name: sparkApplication_SA, value: '{{inputs.parameters.sparkApplication_SA}}'}
+      - name: print-msg
+        template: print-msg
+        dependencies: [apply-kubernetes-object]
+        arguments:
+          parameters:
+          - {name: apply-kubernetes-object-Name, value: '{{tasks.apply-kubernetes-object.outputs.parameters.apply-kubernetes-object-Name}}'}
+  arguments:
+    parameters:
+    - {name: sparkApplication_NS}
+    - {name: sparkApplication_SA}
+  serviceAccountName: pipeline-runner
