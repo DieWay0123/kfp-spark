@@ -3,7 +3,8 @@
 ## 使用方式
 1. `python pipeline/kubeflow_pipeline.py`編譯出pipeline的yaml檔案
 2. `kubectl apply -f rbac/pipeline-runner-cluster-rbac.yaml`讓pipeline SA有權限可以部屬sparkapplication
-3. 上傳pipeline到kubeflow中，在create run時要將SA設定成pipeline-runner
+3. `kubectl apply -f pvc.yaml`
+4. 上傳pipeline到kubeflow中，在create run時要將SA設定成pipeline-runner
 
 ___
 
