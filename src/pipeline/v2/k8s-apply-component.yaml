@@ -1,0 +1,17 @@
+name: Apply Kubernetes object
+inputs:
+  - {name: Object, type: String}
+metadata:
+  annotations:
+    author: Alexey Volkov <alexey.volkov@ark-kun.com>
+implementation:
+  container:
+    image: dieway/kubectl:1.29.8
+    command:
+      - bash
+      - -exc
+      - |
+        object_path=$0
+        echo "$object_path" > "SparkJob.yaml"
+        kubectl apply -f SparkJob.yaml
+      - {inputValue: Object}

@@ -1,0 +1,121 @@
+# PIPELINE DEFINITION
+# Name: spark-operator-job-pipeline
+# Description: Spark Operator job pipeline
+# Inputs:
+#    sparkApplication_NS: str
+#    sparkApplication_SA: str
+components:
+  comp-apply-kubernetes-object:
+    executorLabel: exec-apply-kubernetes-object
+    inputDefinitions:
+      parameters:
+        object:
+          parameterType: STRING
+  comp-print-msg:
+    executorLabel: exec-print-msg
+    inputDefinitions:
+      parameters:
+        msg:
+          parameterType: STRING
+    outputDefinitions:
+      parameters:
+        Output:
+          parameterType: STRING
+deploymentSpec:
+  executors:
+    exec-apply-kubernetes-object:
+      container:
+        command:
+        - bash
+        - -exc
+        - 'object_path=$0
+
+          echo "$object_path" > "SparkJob.yaml"
+
+          kubectl apply -f SparkJob.yaml
+
+          '
+        - '{{$.inputs.parameters[''object'']}}'
+        image: dieway/kubectl:1.29.8
+    exec-print-msg:
+      container:
+        args:
+        - --executor_input
+        - '{{$}}'
+        - --function_to_execute
+        - print_msg
+        command:
+        - sh
+        - -c
+        - "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip ||\
+          \ python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1\
+          \ python3 -m pip install --quiet --no-warn-script-location 'kfp==2.8.0'\
+          \ '--no-deps' 'typing-extensions>=3.7.4,<5; python_version<\"3.9\"' && \"\
+          $0\" \"$@\"\n"
+        - sh
+        - -ec
+        - 'program_path=$(mktemp -d)
+
+
+          printf "%s" "$0" > "$program_path/ephemeral_component.py"
+
+          _KFP_RUNTIME=true python3 -m kfp.dsl.executor_main                         --component_module_path                         "$program_path/ephemeral_component.py"                         "$@"
+
+          '
+        - "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import\
+          \ *\n\ndef print_msg(msg: str) -> str:\n    print(msg)\n    return msg\n\
+          \n"
+        image: python:3.8
+pipelineInfo:
+  description: Spark Operator job pipeline
+  name: spark-operator-job-pipeline
+root:
+  dag:
+    tasks:
+      apply-kubernetes-object:
+        cachingOptions: {}
+        componentRef:
+          name: comp-apply-kubernetes-object
+        inputs:
+          parameters:
+            object:
+              runtimeValue:
+                constant: '{"apiVersion": "sparkoperator.k8s.io/v1beta2", "kind":
+                  "SparkApplication", "metadata": {"name": "pyspark-process-10kdataset-1725869677",
+                  "namespace": "{{$.inputs.parameters[''pipelinechannel--sparkApplication_NS'']}}"},
+                  "spec": {"type": "Python", "pythonVersion": "3", "mode": "cluster",
+                  "image": "dieway/spark-process-dataset:latest", "imagePullPolicy":
+                  "Always", "mainApplicationFile": "local:///home/src/pyspark_process_10kdataset.py",
+                  "sparkVersion": "3.5.0", "volumes": [{"name": "my-pvc", "persistentVolumeClaim":
+                  {"claimName": "my-pvc"}}], "restartPolicy": {"type": "Never"}, "driver":
+                  {"labels": {"version": "3.5.0"}, "cores": 1, "coreLimit": "1200m",
+                  "memory": "512m", "serviceAccount": "{{$.inputs.parameters[''pipelinechannel--sparkApplication_SA'']}}",
+                  "volumeMounts": [{"name": "my-pvc", "mountPath": "/mnt"}]}, "executor":
+                  {"labels": {"version": "3.5.0"}, "instances": 1, "cores": 1, "coreLimit":
+                  "1200m", "memory": "512m", "volumeMounts": [{"name": "my-pvc", "mountPath":
+                  "/mnt"}]}}}'
+            pipelinechannel--sparkApplication_NS:
+              componentInputParameter: sparkApplication_NS
+            pipelinechannel--sparkApplication_SA:
+              componentInputParameter: sparkApplication_SA
+        taskInfo:
+          name: apply-kubernetes-object
+      print-msg:
+        cachingOptions: {}
+        componentRef:
+          name: comp-print-msg
+        inputs:
+          parameters:
+            msg:
+              runtimeValue:
+                constant: Job pyspark-process-10kdataset-1725869677 is completed.
+        taskInfo:
+          name: print-msg
+  inputDefinitions:
+    parameters:
+      sparkApplication_NS:
+        parameterType: STRING
+      sparkApplication_SA:
+        parameterType: STRING
+schemaVersion: 2.1.0
+sdkVersion: kfp-2.8.0
