@@ -19,7 +19,7 @@ apiVersion: sparkoperator.k8s.io/v1beta2
 kind: SparkApplication
 metadata:
   name: pyspark-process-10kdataset-{epoch}
-  namespace: "{NS}"
+  namespace: spark-operator
 spec:
   type: Python
   pythonVersion: "3"
@@ -29,9 +29,9 @@ spec:
   mainApplicationFile: "local:///home/src/pyspark_process_10kdataset.py"
   sparkVersion: 3.5.0
   volumes:
-    - name: my-pvc
-      persistentVolumeClaim:
-        claimName: my-pvc
+  - name: my-pvc
+    persistentVolumeClaim:
+      claimName: my-pvc
   restartPolicy:
     type: Never       
   driver:
@@ -40,12 +40,13 @@ spec:
     cores: 1
     coreLimit: 1200m
     memory: 512m
-    serviceAccount: "{SA}"
+    serviceAccount: spark-operator-spark
     volumeMounts:
-      - name: my-pvc
-        mountPath: /mnt
+    - name: my-pvc
+      mountPath: /mnt
     env:
-      - datasetPath: "{datasetPath}"
+    - name: datasetPath
+      value: dst
   executor:
     labels:
       version: 3.5.0
@@ -54,7 +55,9 @@ spec:
     coreLimit: 1200m
     memory: 512m
     volumeMounts:
-      - name: my-pvc
-        mountPath: /mnt
+    - name: my-pvc
+      mountPath: /mnt
     env:
-      - datasetPath: "{datasetPath}"
+    - name: datasetPath
+      value: dst
+

@@ -1,5 +1,6 @@
 FROM spark:3.5.0
 
+WORKDIR /home/datasets
 WORKDIR /home/src
 
 COPY . .
