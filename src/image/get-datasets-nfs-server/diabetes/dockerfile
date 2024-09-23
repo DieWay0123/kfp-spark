@@ -1,9 +1,0 @@
-FROM python:3.9
-
-WORKDIR /home/src
-COPY . .
-
-USER root
-RUN ["apt install", "nfs-common"]
-
-CMD ["echo", "Hello, World!"]
