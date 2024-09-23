@@ -95,7 +95,7 @@ def spark_job_pipeline(
     k8s_apply_op = comp.load_component_from_file("k8s-apply-component.yaml")
 
     # Execute the apply command
-    spark_job_op = k8s_apply_op(object=json.dumps(spark_job_definition), DatasetPath=)
+    spark_job_op = k8s_apply_op(object=json.dumps(spark_job_definition))
 
     # Fetch spark job name
     spark_job_name = spark_job_definition["metadata"]["name"]
