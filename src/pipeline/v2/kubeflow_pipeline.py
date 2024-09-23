@@ -25,15 +25,14 @@ def get_spark_job_definition(sparkApplication_NS, sparkApplication_SA, dataset_p
     spark_job_manifest["metadata"]["name"] = spark_job_manifest["metadata"]["name"].format(epoch=epoch)
     spark_job_manifest["metadata"]["namespace"] = spark_job_manifest["metadata"]["namespace"].format(NS=sparkApplication_NS)
     spark_job_manifest["spec"]["driver"]["serviceAccount"] = spark_job_manifest["spec"]["driver"]["serviceAccount"].format(SA=sparkApplication_SA)
-    spark_job_manifest["spec"]["executor"]["env"][0] = spark_job_manifest["spec"]["executor"]["env"][0].format(datasetPath=dataset_path)
-    spark_job_manifest["spec"]["driver"]["env"][0] = spark_job_manifest["spec"]["driver"]["env"][0].format(datasetPath=dataset_path)
-
+    spark_job_manifest["spec"]["driver"]["env"][0]["datasetPath"] = spark_job_manifest["spec"]["driver"]["env"][0]["datasetPath"].format(datasetPath=dataset_path)
+    spark_job_manifest["spec"]["executor"]["env"][0]["datasetPath"] = spark_job_manifest["spec"]["executor"]["env"][0]["datasetPath"].format(datasetPath=dataset_path)
     return spark_job_manifest
 
 #Get and concat dataset
 @dsl.component(
   base_image="dieway/get-dataset-nfs-server:diabetes",
-  packages_to_install=["python-dotenv==1.0.1", "pandas=2.0.2"]
+  packages_to_install=["python-dotenv==1.0.1", "pandas==2.2.2", "numpy==2.0.0"]
 )
 def load_raw_datasets_from_nfs(
   diabetes_dataset: Output[Dataset]
@@ -73,7 +72,9 @@ def load_raw_datasets_from_nfs(
   dataset_pd = pd.read_csv(destination_file)
   dataset_pd.to_csv(diabetes_dataset.path)
 
-@dsl.component
+@dsl.component(
+  base_image="python:3.9"
+)
 def print_msg(msg: str) -> str:
     print(msg)
     return msg
@@ -93,9 +94,8 @@ def spark_job_pipeline(
     dataset_path = load_raw_data__from_nfs_task.outputs['diabetes_dataset']
     spark_job_definition = get_spark_job_definition(sparkApplication_NS=sparkApplication_NS, sparkApplication_SA=sparkApplication_SA, dataset_path=dataset_path)
     k8s_apply_op = comp.load_component_from_file("k8s-apply-component.yaml")
-
     # Execute the apply command
-    spark_job_op = k8s_apply_op(object=json.dumps(spark_job_definition))
+    spark_job_op = k8s_apply_op(object=json.dumps(spark_job_definition), dataset=dataset_path)
 
     # Fetch spark job name
     spark_job_name = spark_job_definition["metadata"]["name"]

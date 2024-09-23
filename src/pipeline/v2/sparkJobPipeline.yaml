@@ -8,9 +8,22 @@ components:
   comp-apply-kubernetes-object:
     executorLabel: exec-apply-kubernetes-object
     inputDefinitions:
+      artifacts:
+        dataset:
+          artifactType:
+            schemaTitle: system.Artifact
+            schemaVersion: 0.0.1
       parameters:
         object:
           parameterType: STRING
+  comp-load-raw-datasets-from-nfs:
+    executorLabel: exec-load-raw-datasets-from-nfs
+    outputDefinitions:
+      artifacts:
+        diabetes_dataset:
+          artifactType:
+            schemaTitle: system.Dataset
+            schemaVersion: 0.0.1
   comp-print-msg:
     executorLabel: exec-print-msg
     inputDefinitions:
@@ -37,6 +50,48 @@ deploymentSpec:
           '
         - '{{$.inputs.parameters[''object'']}}'
         image: dieway/kubectl:1.29.8
+    exec-load-raw-datasets-from-nfs:
+      container:
+        args:
+        - --executor_input
+        - '{{$}}'
+        - --function_to_execute
+        - load_raw_datasets_from_nfs
+        command:
+        - sh
+        - -c
+        - "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip ||\
+          \ python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1\
+          \ python3 -m pip install --quiet --no-warn-script-location 'kfp==2.9.0'\
+          \ '--no-deps' 'typing-extensions>=3.7.4,<5; python_version<\"3.9\"'  &&\
+          \  python3 -m pip install --quiet --no-warn-script-location 'python-dotenv==1.0.1'\
+          \ 'pandas==2.2.2' 'numpy==2.0.0' && \"$0\" \"$@\"\n"
+        - sh
+        - -ec
+        - 'program_path=$(mktemp -d)
+
+
+          printf "%s" "$0" > "$program_path/ephemeral_component.py"
+
+          _KFP_RUNTIME=true python3 -m kfp.dsl.executor_main                         --component_module_path                         "$program_path/ephemeral_component.py"                         "$@"
+
+          '
+        - "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import\
+          \ *\n\ndef load_raw_datasets_from_nfs(\n  diabetes_dataset: Output[Dataset]\n\
+          ):\n  import os\n  import shutil\n  import pandas as pd\n  from dotenv import\
+          \ load_dotenv, dotenv_values\n\n  config = dotenv_values(\".env\")\n\n \
+          \ nfs_server = config[\"NFS_SERVER\"]\n  mount_point = config[\"MOUNT_POINT\"\
+          ]\n  pwd = config[\"PASSWORD\"]\n\n  # mount nfs\n  if not os.path.exists(mount_point):\n\
+          \    os.makedirs(mount_point)\n\n  os.system(f\"echo {pwd} | sudo -S mount\
+          \ -t nfs {nfs_server} {mount_point}\")\n\n  # copy file\n  source_file =\
+          \ config[\"SOURCE_FILE\"]\n  destination_file = config[\"DESTINATION_FILE\"\
+          ]\n\n  # \u8907\u88FD\u6587\u4EF6\n  while not os.path.exists(source_file):\n\
+          \    print(f\"file {source_file} not found\")\n\n  shutil.copyfile(source_file,\
+          \ destination_file)\n\n  os.system(f\"sudo umount {mount_point}\")\n  #os.system(f\"\
+          chmod -R 777 {destination_file}\")\n  os.system(f\"echo copy datasets from\
+          \ nfs-servre DONE!\")\n\n  # data passing in pipeline\n  dataset_pd = pd.read_csv(destination_file)\n\
+          \  dataset_pd.to_csv(diabetes_dataset.path)\n\n"
+        image: dieway/get-dataset-nfs-server:diabetes
     exec-print-msg:
       container:
         args:
@@ -49,7 +104,7 @@ deploymentSpec:
         - -c
         - "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip ||\
           \ python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1\
-          \ python3 -m pip install --quiet --no-warn-script-location 'kfp==2.8.0'\
+          \ python3 -m pip install --quiet --no-warn-script-location 'kfp==2.9.0'\
           \ '--no-deps' 'typing-extensions>=3.7.4,<5; python_version<\"3.9\"' && \"\
           $0\" \"$@\"\n"
         - sh
@@ -65,7 +120,7 @@ deploymentSpec:
         - "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import\
           \ *\n\ndef print_msg(msg: str) -> str:\n    print(msg)\n    return msg\n\
           \n"
-        image: python:3.8
+        image: python:3.9
 pipelineInfo:
   description: Spark Operator job pipeline
   name: spark-operator-job-pipeline
@@ -76,12 +131,19 @@ root:
         cachingOptions: {}
         componentRef:
           name: comp-apply-kubernetes-object
+        dependentTasks:
+        - load-raw-datasets-from-nfs
         inputs:
+          artifacts:
+            dataset:
+              taskOutputArtifact:
+                outputArtifactKey: diabetes_dataset
+                producerTask: load-raw-datasets-from-nfs
           parameters:
             object:
               runtimeValue:
                 constant: '{"apiVersion": "sparkoperator.k8s.io/v1beta2", "kind":
-                  "SparkApplication", "metadata": {"name": "pyspark-process-10kdataset-1725869677",
+                  "SparkApplication", "metadata": {"name": "pyspark-process-10kdataset-1727088880",
                   "namespace": "{{$.inputs.parameters[''pipelinechannel--sparkApplication_NS'']}}"},
                   "spec": {"type": "Python", "pythonVersion": "3", "mode": "cluster",
                   "image": "dieway/spark-process-dataset:latest", "imagePullPolicy":
@@ -90,16 +152,24 @@ root:
                   {"claimName": "my-pvc"}}], "restartPolicy": {"type": "Never"}, "driver":
                   {"labels": {"version": "3.5.0"}, "cores": 1, "coreLimit": "1200m",
                   "memory": "512m", "serviceAccount": "{{$.inputs.parameters[''pipelinechannel--sparkApplication_SA'']}}",
-                  "volumeMounts": [{"name": "my-pvc", "mountPath": "/mnt"}]}, "executor":
-                  {"labels": {"version": "3.5.0"}, "instances": 1, "cores": 1, "coreLimit":
-                  "1200m", "memory": "512m", "volumeMounts": [{"name": "my-pvc", "mountPath":
-                  "/mnt"}]}}}'
+                  "volumeMounts": [{"name": "my-pvc", "mountPath": "/mnt"}], "env":
+                  [{"datasetPath": "{{channel:task=load-raw-datasets-from-nfs;name=diabetes_dataset;type=system.Dataset@0.0.1;}}"}]},
+                  "executor": {"labels": {"version": "3.5.0"}, "instances": 1, "cores":
+                  1, "coreLimit": "1200m", "memory": "512m", "volumeMounts": [{"name":
+                  "my-pvc", "mountPath": "/mnt"}], "env": [{"datasetPath": "{{channel:task=load-raw-datasets-from-nfs;name=diabetes_dataset;type=system.Dataset@0.0.1;}}"}]}}}'
             pipelinechannel--sparkApplication_NS:
               componentInputParameter: sparkApplication_NS
             pipelinechannel--sparkApplication_SA:
               componentInputParameter: sparkApplication_SA
         taskInfo:
           name: apply-kubernetes-object
+      load-raw-datasets-from-nfs:
+        cachingOptions:
+          enableCache: true
+        componentRef:
+          name: comp-load-raw-datasets-from-nfs
+        taskInfo:
+          name: load-raw-datasets-from-nfs
       print-msg:
         cachingOptions: {}
         componentRef:
@@ -108,7 +178,7 @@ root:
           parameters:
             msg:
               runtimeValue:
-                constant: Job pyspark-process-10kdataset-1725869677 is completed.
+                constant: Job pyspark-process-10kdataset-1727088880 is completed.
         taskInfo:
           name: print-msg
   inputDefinitions:
@@ -118,4 +188,4 @@ root:
       sparkApplication_SA:
         parameterType: STRING
 schemaVersion: 2.1.0
-sdkVersion: kfp-2.8.0
+sdkVersion: kfp-2.9.0

@@ -3,4 +3,7 @@ FROM python:3.9
 WORKDIR /home/src
 COPY . .
 
-CMD [ "echo", "Hello, World!"]
+USER root
+RUN ["apt install", "nfs-common"]
+
+CMD ["echo", "Hello, World!"]

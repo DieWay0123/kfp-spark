@@ -1,6 +1,7 @@
 name: Apply Kubernetes object
 inputs:
   - {name: Object, type: String}
+  - {name: Dataset}
 metadata:
   annotations:
     author: Alexey Volkov <alexey.volkov@ark-kun.com>
