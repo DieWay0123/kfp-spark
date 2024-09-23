@@ -1,6 +1,7 @@
 name: Apply Kubernetes object
 inputs:
   - {name: Object, type: String}
+  - {name: DatasetPath, type: String}
 metadata:
   annotations:
     author: Alexey Volkov <alexey.volkov@ark-kun.com>
@@ -15,3 +16,4 @@ implementation:
         echo "$object_path" > "SparkJob.yaml"
         kubectl apply -f SparkJob.yaml
       - {inputValue: Object}
+      - {inputValue: DatasetPath}

@@ -1,10 +1,12 @@
 from pyspark.sql import SparkSession
 from pyspark.sql.types import IntegerType, StringType
 from pyspark.sql.functions import col, when, mean
+import os
 
 if __name__ == "__main__":
   spark = SparkSession.builder.appName('pyspark-process-10kDataset').getOrCreate()
-  df_data = spark.read.csv("./dataset.csv"  , header=True, inferSchema=True)
+  dataset_path = os.getenv("datasetPath")
+  df_data = spark.read.csv(dataset_path  , header=True, inferSchema=True)
 
   df_data = df_data.withColumn('diabetes', df_data['diabetes'].cast(StringType()))
   df_data = df_data.filter(df_data['diabetes'] != 'No Info')

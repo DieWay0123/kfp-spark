@@ -44,6 +44,8 @@ spec:
     volumeMounts:
       - name: my-pvc
         mountPath: /mnt
+    env:
+      - datasetPath: "{datasetPath}"
   executor:
     labels:
       version: 3.5.0
@@ -54,3 +56,5 @@ spec:
     volumeMounts:
       - name: my-pvc
         mountPath: /mnt
+    env:
+      - datasetPath: "{datasetPath}"
