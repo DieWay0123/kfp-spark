@@ -1,0 +1,7 @@
+FROM dieway/kubectl:1.29.8
+
+WORKDIR /home/src
+ADD . .
+
+RUN export PATH=$PATH:/home/src
+CMD ["/bin/bash"]

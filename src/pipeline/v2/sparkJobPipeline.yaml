@@ -2,8 +2,8 @@
 # Name: spark-operator-job-pipeline
 # Description: Spark Operator job pipeline
 components:
-  comp-apply-kubernetes-object:
-    executorLabel: exec-apply-kubernetes-object
+  comp-apply-sparkapplication:
+    executorLabel: exec-apply-sparkapplication
     inputDefinitions:
       artifacts:
         dataset:
@@ -12,6 +12,14 @@ components:
             schemaVersion: 0.0.1
       parameters:
         object:
+          parameterType: STRING
+  comp-check-sparkapplication-status:
+    executorLabel: exec-check-sparkapplication-status
+    inputDefinitions:
+      parameters:
+        name:
+          parameterType: STRING
+        namespace:
           parameterType: STRING
   comp-load-raw-datasets-from-nfs:
     executorLabel: exec-load-raw-datasets-from-nfs
@@ -33,7 +41,7 @@ components:
           parameterType: STRING
 deploymentSpec:
   executors:
-    exec-apply-kubernetes-object:
+    exec-apply-sparkapplication:
       container:
         command:
         - bash
@@ -56,6 +64,19 @@ deploymentSpec:
         - '{{$.inputs.parameters[''object'']}}'
         - '{{$.inputs.artifacts[''dataset''].path}}'
         image: dieway/kubectl:1.29.8
+    exec-check-sparkapplication-status:
+      container:
+        command:
+        - 'export sparkapplication_name=$0
+
+          export sparkapplication_namespace=$1
+
+          source checkSparkApplicationStatus.sh
+
+          '
+        - '{{$.inputs.parameters[''name'']}}'
+        - '{{$.inputs.parameters[''namespace'']}}'
+        image: dieway/check-sparkapplication-status:latest
     exec-load-raw-datasets-from-nfs:
       container:
         args:
@@ -122,10 +143,10 @@ pipelineInfo:
 root:
   dag:
     tasks:
-      apply-kubernetes-object:
+      apply-sparkapplication:
         cachingOptions: {}
         componentRef:
-          name: comp-apply-kubernetes-object
+          name: comp-apply-sparkapplication
         dependentTasks:
         - load-raw-datasets-from-nfs
         inputs:
@@ -138,7 +159,7 @@ root:
             object:
               runtimeValue:
                 constant: '{"apiVersion": "sparkoperator.k8s.io/v1beta2", "kind":
-                  "SparkApplication", "metadata": {"name": "pyspark-process-10kdataset-1727124385",
+                  "SparkApplication", "metadata": {"name": "pyspark-process-10kdataset-1727260531",
                   "namespace": "spark-operator"}, "spec": {"type": "Python", "pythonVersion":
                   "3", "mode": "cluster", "image": "dieway/spark-process-dataset:latest",
                   "imagePullPolicy": "Always", "mainApplicationFile": "local:///home/src/pyspark_process_10kdataset.py",
@@ -152,7 +173,24 @@ root:
                   "volumeMounts": [{"name": "my-pvc", "mountPath": "/mnt"}], "env":
                   [{"name": "datasetPath", "value": "dst"}]}}}'
         taskInfo:
-          name: apply-kubernetes-object
+          name: apply-sparkapplication
+      check-sparkapplication-status:
+        cachingOptions:
+          enableCache: true
+        componentRef:
+          name: comp-check-sparkapplication-status
+        dependentTasks:
+        - apply-sparkapplication
+        inputs:
+          parameters:
+            name:
+              runtimeValue:
+                constant: pyspark-process-10kdataset-1727260531
+            namespace:
+              runtimeValue:
+                constant: spark-operator
+        taskInfo:
+          name: check-sparkapplication-status
       load-raw-datasets-from-nfs:
         cachingOptions:
           enableCache: true
@@ -165,12 +203,12 @@ root:
         componentRef:
           name: comp-print-msg
         dependentTasks:
-        - apply-kubernetes-object
+        - check-sparkapplication-status
         inputs:
           parameters:
             msg:
               runtimeValue:
-                constant: Job pyspark-process-10kdataset-1727124385 is completed.
+                constant: Job pyspark-process-10kdataset-1727260531 is completed.
         taskInfo:
           name: print-msg
 schemaVersion: 2.1.0

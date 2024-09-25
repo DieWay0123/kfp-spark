@@ -1,4 +1,4 @@
-name: Apply Kubernetes object
+name: Apply sparkapplication
 inputs:
   - {name: Object, type: String}
   - {name: Dataset, type: Dataset}

@@ -66,9 +66,13 @@ def spark_job_pipeline():
 
     # Fetch spark job name
     spark_job_name = spark_job_definition["metadata"]["name"]
+    spark_job_namespace = spark_job_definition["metadata"]["namespace"]
     spark_job_task.set_caching_options(enable_caching=False)
+    
+    check_sparkapplication_status_op = comp.load_component_from_file("checkSparkapplication.yaml")
+    check_sparkapplication_status_task = check_sparkapplication_status_op(name=spark_job_name, namespace=spark_job_namespace).after(spark_job_task)
 
-    print_message_task = print_msg(msg=f"Job {spark_job_name} is completed.").after(spark_job_task)
+    print_message_task = print_msg(msg=f"Job {spark_job_name} is completed.").after(check_sparkapplication_status_task)
     print_message_task.set_caching_options(enable_caching=False)
 
 

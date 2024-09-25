@@ -19,7 +19,7 @@ apiVersion: sparkoperator.k8s.io/v1beta2
 kind: SparkApplication
 metadata:
   name: pyspark-process-10kdataset-{epoch}
-  namespace: "{NS}"
+  namespace: spark-operator
 spec:
   type: Python
   pythonVersion: "3"
@@ -40,7 +40,7 @@ spec:
     cores: 1
     coreLimit: 1200m
     memory: 512m
-    serviceAccount: "{SA}"
+    serviceAccount: spark-operator-spark
     volumeMounts:
       - name: my-pvc
         mountPath: /mnt
