@@ -4,7 +4,7 @@ set -eux
 
 SPARK_APPLICATION_NAME=$sparkapplication_name
 NAMESPACE=$sparkapplication_namespace
-SPARK_APPLICATION=$(kubectl get $SPARK_APPLICATION_NAME -n $NAMESPACE)
+SPARK_APPLICATION=$(kubectl get sparkapplication $SPARK_APPLICATION_NAME -n $NAMESPACE)
 STATUS=$(echo $SPARK_APPLICATION | awk '{print $8}')
 
 while true; do
