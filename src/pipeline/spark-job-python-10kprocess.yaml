@@ -32,7 +32,7 @@ spec:
   - name: processed-datasets-pv
     persistentVolumeClaim:
       claimName: processed-datasets-pvc
-  - name: dataset-pv-test
+  - name: dataset-pv
     persistentVolumeClaim:
       claimName: dataset-pvc
   restartPolicy:
@@ -47,7 +47,7 @@ spec:
     volumeMounts:
     - name: processed-datasets-pv
       mountPath: /tmp/processed_dataset
-    - name: dataset-pv-test
+    - name: dataset-pv
       mountPath: /tmp/dataset
     env:
     - name: datasetPath
@@ -62,7 +62,7 @@ spec:
     volumeMounts:
     - name: processed-datasets-pv
       mountPath: /tmp/processed_dataset
-    - name: dataset-pv-test
+    - name: dataset-pv
       mountPath: /tmp/dataset
     env:
     - name: datasetPath

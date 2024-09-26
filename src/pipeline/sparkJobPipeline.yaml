@@ -161,24 +161,23 @@ root:
             object:
               runtimeValue:
                 constant: '{"apiVersion": "sparkoperator.k8s.io/v1beta2", "kind":
-                  "SparkApplication", "metadata": {"name": "pyspark-process-10kdataset-1727351757",
+                  "SparkApplication", "metadata": {"name": "pyspark-process-10kdataset-1727376504",
                   "namespace": "spark-operator"}, "spec": {"type": "Python", "pythonVersion":
                   "3", "mode": "cluster", "image": "dieway/spark-process-dataset:latest",
                   "imagePullPolicy": "Always", "mainApplicationFile": "local:///home/src/pyspark_process_10kdataset.py",
                   "sparkVersion": "3.5.0", "volumes": [{"name": "processed-datasets-pv",
                   "persistentVolumeClaim": {"claimName": "processed-datasets-pvc"}},
-                  {"name": "dataset-pv-test", "persistentVolumeClaim": {"claimName":
-                  "dataset-pvc"}}], "restartPolicy": {"type": "Never"}, "driver":
-                  {"labels": {"version": "3.5.0"}, "cores": 1, "coreLimit": "1200m",
-                  "memory": "512m", "serviceAccount": "spark-operator-spark", "volumeMounts":
-                  [{"name": "processed-datasets-pv", "mountPath": "/tmp/processed_dataset"},
-                  {"name": "dataset-pv-test", "mountPath": "/tmp/dataset"}], "env":
-                  [{"name": "datasetPath", "value": "dst"}]}, "executor": {"labels":
-                  {"version": "3.5.0"}, "instances": 1, "cores": 1, "coreLimit": "1200m",
-                  "memory": "512m", "volumeMounts": [{"name": "processed-datasets-pv",
-                  "mountPath": "/tmp/processed_dataset"}, {"name": "dataset-pv-test",
-                  "mountPath": "/tmp/dataset"}], "env": [{"name": "datasetPath", "value":
-                  "dst"}]}}}'
+                  {"name": "dataset-pv", "persistentVolumeClaim": {"claimName": "dataset-pvc"}}],
+                  "restartPolicy": {"type": "Never"}, "driver": {"labels": {"version":
+                  "3.5.0"}, "cores": 1, "coreLimit": "1200m", "memory": "512m", "serviceAccount":
+                  "spark-operator-spark", "volumeMounts": [{"name": "processed-datasets-pv",
+                  "mountPath": "/tmp/processed_dataset"}, {"name": "dataset-pv", "mountPath":
+                  "/tmp/dataset"}], "env": [{"name": "datasetPath", "value": "dst"}]},
+                  "executor": {"labels": {"version": "3.5.0"}, "instances": 1, "cores":
+                  1, "coreLimit": "1200m", "memory": "512m", "volumeMounts": [{"name":
+                  "processed-datasets-pv", "mountPath": "/tmp/processed_dataset"},
+                  {"name": "dataset-pv", "mountPath": "/tmp/dataset"}], "env": [{"name":
+                  "datasetPath", "value": "dst"}]}}}'
         taskInfo:
           name: apply-sparkapplication
       check-sparkapplication-status:
@@ -191,7 +190,7 @@ root:
           parameters:
             name:
               runtimeValue:
-                constant: pyspark-process-10kdataset-1727351757
+                constant: pyspark-process-10kdataset-1727376504
             namespace:
               runtimeValue:
                 constant: spark-operator
@@ -213,7 +212,7 @@ root:
           parameters:
             msg:
               runtimeValue:
-                constant: Job pyspark-process-10kdataset-1727351757 is completed.
+                constant: Job pyspark-process-10kdataset-1727376504 is completed.
         taskInfo:
           name: print-msg
 schemaVersion: 2.1.0
@@ -225,5 +224,5 @@ platforms:
       executors:
         exec-load-raw-datasets-from-nfs:
           pvcMount:
-          - constant: dataset-pvc
+          - constant: dataset-pvc-kubeflow-ns
             mountPath: /home/nfs

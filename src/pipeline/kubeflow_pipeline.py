@@ -56,7 +56,7 @@ def spark_job_pipeline():
     load_raw_data_from_nfs_task.set_caching_options(enable_caching=False)
     kubernetes.mount_pvc(
        load_raw_data_from_nfs_task,
-       pvc_name='dataset-pvc',
+       pvc_name='dataset-pvc-kubeflow-ns',
        mount_path="/home/nfs"
     )
 

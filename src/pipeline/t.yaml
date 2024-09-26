@@ -1,20 +1,20 @@
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: dataset-pvc
-  namespace: spark-operator
+  name: dataset-pvc-kubeflow-ns
+  namespace: kubeflow-user-example-com
 spec:
   accessModes:
     - ReadWriteMany
   resources:
     requests:
       storage: 1Gi
-  volumeName: dataset-pv
+  volumeName: dataset-pv-kubeflow-ns
 ---
 apiVersion: v1
 kind: PersistentVolume
 metadata:
-  name: dataset-pv
+  name: dataset-pv-kubeflow-ns
 spec:
   capacity:
     storage: 1Gi
