@@ -29,9 +29,9 @@ spec:
   mainApplicationFile: "local:///home/src/pyspark_process_10kdataset.py"
   sparkVersion: 3.5.0
   volumes:
-    - name: my-pvc
-      persistentVolumeClaim:
-        claimName: my-pvc
+  - name: processed-datasets-pvc
+    persistentVolumeClaim:
+      claimName: processed-datasets-pvc
   restartPolicy:
     type: Never       
   driver:
@@ -42,8 +42,11 @@ spec:
     memory: 512m
     serviceAccount: spark-operator-spark
     volumeMounts:
-      - name: my-pvc
-        mountPath: /mnt
+    - name: processed-datasets-pvc
+      mountPath: /mnt/datasets
+    env:
+    - name: datasetPath
+      value: dst
   executor:
     labels:
       version: 3.5.0
@@ -52,5 +55,9 @@ spec:
     coreLimit: 1200m
     memory: 512m
     volumeMounts:
-      - name: my-pvc
-        mountPath: /mnt
+    - name: processed-datasets-pvc
+      mountPath: /mnt/datasets
+    env:
+    - name: datasetPath
+      value: dst
+
