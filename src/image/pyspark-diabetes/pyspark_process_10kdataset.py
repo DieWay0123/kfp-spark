@@ -38,7 +38,9 @@ if __name__ == "__main__":
   df_data.printSchema()
 
   #df_data.coalesce(1).write.csv('mycsv2.csv')
+
   df_data.toPandas().to_csv('/tmp/processed_dataset/processed_diabetes_dataset.csv', header=False, index=False)
+
   #df_data.write.csv('./processed_dataset.csv', header=False, mode='overwrite')
   spark.stop()
 
