@@ -12,3 +12,16 @@ spec:
   nfs:
     path: "/tmp/nfs/processed_datasets"
     server: 10.2.12.7
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata: 
+  name: processed-datasets-pvc
+  namespace: spark-operator
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 1Gi
+  volumeName: processed-datasets-pv

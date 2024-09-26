@@ -5,8 +5,8 @@ import os
 
 if __name__ == "__main__":
   spark = SparkSession.builder.appName('pyspark-process-10kDataset').getOrCreate()
-  dataset_path = os.getenv("datasetPath")
-  df_data = spark.read.csv(dataset_path  , header=True, inferSchema=True)
+  #dataset_path = os.getenv("datasetPath")
+  df_data = spark.read.csv('/tmp/dataset/10kdataset.csv'  , header=True, inferSchema=True)
 
   df_data = df_data.withColumn('diabetes', df_data['diabetes'].cast(StringType()))
   df_data = df_data.filter(df_data['diabetes'] != 'No Info')
@@ -38,7 +38,7 @@ if __name__ == "__main__":
   df_data.printSchema()
 
   #df_data.coalesce(1).write.csv('mycsv2.csv')
-  df_data.toPandas().to_csv('/mnt/datasets/processed_diabetes.csv', header=False, index=False)
+  df_data.toPandas().to_csv('/tmp/processed_dataset/processed_diabetes_dataset.csv', header=False, index=False)
   #df_data.write.csv('./processed_dataset.csv', header=False, mode='overwrite')
   spark.stop()
 

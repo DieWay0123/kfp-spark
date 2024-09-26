@@ -55,24 +55,16 @@ def spark_job_pipeline():
     load_raw_data_from_nfs_task = load_raw_datasets_from_nfs()
     load_raw_data_from_nfs_task.set_caching_options(enable_caching=False)
     kubernetes.mount_pvc(
-<<<<<<< HEAD
        load_raw_data_from_nfs_task,
        pvc_name='dataset-pvc',
        mount_path="/home/nfs"
     )
 
-=======
-        load_raw_data_from_nfs_task,
-        pvc_name='dataset-pvc',
-        mount_path="/home/nfs"
-    )
-    
->>>>>>> 01924b301c9d2625dbcced059ce8900ff3bf0a14
     dataset_path = load_raw_data_from_nfs_task.outputs['diabetes_dataset']
     spark_job_definition = get_spark_job_definition(dataset_path=dataset_path)
     k8s_apply_op = comp.load_component_from_file("k8s-apply-component.yaml")
     spark_job_task = k8s_apply_op(object=json.dumps(spark_job_definition), dataset=dataset_path)
-
+    
     # Fetch spark job name
     spark_job_name = spark_job_definition["metadata"]["name"]
     spark_job_namespace = spark_job_definition["metadata"]["namespace"]
@@ -80,6 +72,7 @@ def spark_job_pipeline():
     
     check_sparkapplication_status_op = comp.load_component_from_file("checkSparkapplication.yaml")
     check_sparkapplication_status_task = check_sparkapplication_status_op(name=spark_job_name, namespace=spark_job_namespace).after(spark_job_task)
+    check_sparkapplication_status_task.set_caching_options(enable_caching=False)
 
     print_message_task = print_msg(msg=f"Job {spark_job_name} is completed.").after(check_sparkapplication_status_task)
     print_message_task.set_caching_options(enable_caching=False)
