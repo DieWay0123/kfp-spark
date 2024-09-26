@@ -55,11 +55,19 @@ def spark_job_pipeline():
     load_raw_data_from_nfs_task = load_raw_datasets_from_nfs()
     load_raw_data_from_nfs_task.set_caching_options(enable_caching=False)
     kubernetes.mount_pvc(
+<<<<<<< HEAD
        load_raw_data_from_nfs_task,
        pvc_name='dataset-pvc',
        mount_path="/home/nfs"
     )
 
+=======
+        load_raw_data_from_nfs_task,
+        pvc_name='dataset-pvc',
+        mount_path="/home/nfs"
+    )
+    
+>>>>>>> 01924b301c9d2625dbcced059ce8900ff3bf0a14
     dataset_path = load_raw_data_from_nfs_task.outputs['diabetes_dataset']
     spark_job_definition = get_spark_job_definition(dataset_path=dataset_path)
     k8s_apply_op = comp.load_component_from_file("k8s-apply-component.yaml")
