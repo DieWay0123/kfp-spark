@@ -1,0 +1,14 @@
+FROM spark:3.5.0
+
+USER root
+WORKDIR /mnt/datasets
+WORKDIR /home/src
+
+RUN chmod 777 /mnt/datasets
+COPY . .
+
+
+RUN pip install --no-cache-dir -r requirements.txt
+
+CMD ["ls", "-la"]
+

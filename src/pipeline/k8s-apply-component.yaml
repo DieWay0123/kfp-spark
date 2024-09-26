@@ -1,32 +1,23 @@
-name: Apply Kubernetes object
+name: Apply sparkapplication
 inputs:
-  - {name: Object, type: JsonObject}
-outputs:
-  - {name: Name, type: String}
-  - {name: Kind, type: String}
-  - {name: Object, type: JsonObject}
+  - {name: Object, type: String}
+  - {name: Dataset, type: Dataset}
 metadata:
   annotations:
     author: Alexey Volkov <alexey.volkov@ark-kun.com>
 implementation:
   container:
-    image: bitnami/kubectl:1.17.17
+    image: dieway/kubectl:1.29.8
     command:
       - bash
       - -exc
       - |
         object_path=$0
-        output_name_path=$1
-        output_kind_path=$2
-        output_object_path=$3
-        mkdir -p "$(dirname "$output_name_path")"
-        mkdir -p "$(dirname "$output_kind_path")"
-        mkdir -p "$(dirname "$output_object_path")"
-        kubectl apply -f "$object_path" --output=json > "$output_object_path"
-
-        < "$output_object_path" jq '.metadata.name' --raw-output > "$output_name_path"
-        < "$output_object_path" jq '.kind' --raw-output > "$output_kind_path"
-      - {inputPath: Object}
-      - {outputPath: Name}
-      - {outputPath: Kind}
-      - {outputPath: Object}
+        dataset_path=$1
+        echo "$object_path" > "SparkJob.yaml"
+        sed -i "s|dst|$dataset_path|g" SparkJob.yaml
+        echo $1
+        cat SparkJob.yaml
+        kubectl apply -f SparkJob.yaml
+      - {inputValue: Object}
+      - {inputPath: Dataset}
