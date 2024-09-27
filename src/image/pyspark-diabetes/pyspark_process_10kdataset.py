@@ -2,6 +2,7 @@ from pyspark.sql import SparkSession
 from pyspark.sql.types import IntegerType, StringType
 from pyspark.sql.functions import col, when, mean
 import os
+import time
 
 if __name__ == "__main__":
   spark = SparkSession.builder.appName('pyspark-process-10kDataset').getOrCreate()
@@ -38,9 +39,20 @@ if __name__ == "__main__":
   df_data.printSchema()
 
   #df_data.coalesce(1).write.csv('mycsv2.csv')
+  df_data_x = df_data.select('gender', 'age', 'bmi', 'HbA1c_level', 'blood_glucose_level')
+  df_data_y = df_data.select('diabetes')
 
-  df_data.toPandas().to_csv('/tmp/processed_dataset/processed_diabetes_dataset.csv', header=False, index=False)
+  split_dataset_x = df_data_x.randomSplit([0.8, 0.2], seed=42)
+  split_dataset_y = df_data_y.randomSplit([0.8, 0.2], seed=42)
+  x_train, x_test = split_dataset_x[0], split_dataset_x[1]
+  y_train, y_test = split_dataset_y[0], split_dataset_y[1]
 
+  x_train.toPandas().to_csv('/tmp/processed_dataset/heart_disease/x_train.csv', index=False)
+  x_test.toPandas().to_csv('/tmp/processed_dataset/heart_disease/x_test.csv', index=False)
+  y_train.toPandas().to_csv('/tmp/processed_dataset/heart_disease/y_train.csv', index=False)
+  y_test.toPandas().to_csv('/tmp/processed_dataset/heart_disease/y_test.csv', index=False)
+
+  #df_data.toPandas().to_csv('/tmp/processed_dataset/processed_diabetes_dataset.csv', header=False, index=False)
   #df_data.write.csv('./processed_dataset.csv', header=False, mode='overwrite')
   spark.stop()
 
